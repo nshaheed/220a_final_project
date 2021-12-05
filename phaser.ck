@@ -14,12 +14,18 @@ class Phase {
     
     // get how long before the next attack
     fun dur nextEvent() {
+        <<< multi >>>;
         return speed * multi;
     }
     
     fun void execute() {
         0.5 => i.next;
     }
+}
+
+fun dur executePhase(Phase p) {
+    spork~ p.execute();
+    return p.nextEvent();
 }
 
 // The actual phaser object to do the 
@@ -36,19 +42,18 @@ class Phaser {
     1.05 => phase2.multi;
     
     fun void execute() {
-        phase1.nextEvent() => dur d1;
-        phase2.nextEvent() => dur d2;
+        <<< "phaser execute" >>>;
+        
+        phase1 => executePhase => dur d1;
+        phase2 => executePhase => dur d2;
         
         while(true) {
-            // <<< d1, d2 >>>;
             // execute current events
             if (d1 == 0::samp) {
-                spork~ phase1.execute();
-                phase1.nextEvent() => d1;
+                phase1 => executePhase => d1;
             }
             if (d2 == 0::samp) {
-                spork~ phase2.execute();
-                phase2.nextEvent() => d2;
+                phase2 => executePhase => d2;
             }
             
             // update dur values
@@ -63,6 +68,17 @@ class Phaser {
     }
 }
 
+// Tool to schedule events from the score into the phaser's tempo
+class Scheduler {
+    Phaser clock;
+    
+    fun void execute() {
+        spork~ clock.execute();
+        
+        100::second => now;
+    }
+}
+
 // get min of two durs
 fun dur min(dur a, dur b) {
     if (a < b) {
@@ -71,8 +87,9 @@ fun dur min(dur a, dur b) {
     return b;
 }
 
-Phaser p;
+Scheduler s;
+Phaser p @=> s.clock;
 
-spork~ p.execute();
+spork~ s.execute();
 
 100::second => now;
