@@ -153,8 +153,8 @@ class Beat extends Instr {
     440 => float freq;
     0.3 => float gain;
     
-    SinOsc s1 => Gain g => dac;
-    SinOsc s2 => g;
+    SinOsc s1 => Envelope e => dac;
+    SinOsc s2 => e;
     
     
     0 => g.gain;
@@ -164,11 +164,13 @@ class Beat extends Instr {
         freq => s1.freq;
         freq-diff => s2.freq;
         
-        gain => g.gain;
+        gain => e.target;
+        
+        e.keyOn();
         
         duration => now;
         
-        0 => g.gain;
+        e.keyOff();
     }
 }
 
@@ -177,8 +179,8 @@ Phaser p @=> s.clock;
 
 ScoreEvent test;
 Beat i @=> test.i;
-8000 => test.tMin;
-11000 => test.tMax;
+11000 => test.tMin;
+12000 => test.tMax;
 5::second => test.d;
 
 [test, test, test, test] @=> s.score;
