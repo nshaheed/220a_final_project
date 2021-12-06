@@ -42,7 +42,7 @@ class Phaser {
     1.05 => phase2.multi;
     
     fun void execute() {
-        <<< "phaser execute" >>>;
+        // <<< "phaser execute" >>>;
         
         phase1 => executePhase => dur d1;
         phase2 => executePhase => dur d2;
@@ -63,7 +63,7 @@ class Phaser {
             
             // set up things for the next iteration
             nextEvent / 1::samp => tempo.next; // cast dur to float
-            <<< nextEvent >>>;
+            // <<< nextEvent >>>;
             nextEvent => now;
         }
     }
@@ -72,25 +72,54 @@ class Phaser {
 // Tool to schedule events from the score into the phaser's tempo
 class Scheduler {
     Phaser clock;
+    ScoreEvent score[];
     
     fun void execute() {
         spork~ clock.execute();
         
+        score[0] @=> ScoreEvent currEvent;
+        0 => int idx;
         
-        while (true) {
-            if (clock.tempo.last() > 5500 && clock.tempo.last() < 5600) {
-                Instr i;
-                clock.tempo.last()::samp => i.tempo;
-                spork~ i.execute();
+        while (idx < score.cap()) {
+            
+            clock.tempo.last() => float currTempo;
+            
+            // skip and check tempo next time
+            if (!currEvent.run(currTempo)) {
+                1::samp => now;
+                continue;
             }
             
-            if (clock.tempo.last() > 9000 && clock.tempo.last() < 9500) {
-                Instr i;
-                clock.tempo.last()::samp => i.tempo;
-                spork~ i.execute();
+            // set up and execute the ScoreEvent
+            clock.tempo.last()::samp => currEvent.i.tempo;
+            spork~ currEvent.i.execute();
+            
+            
+            idx++;
+            if (idx < score.cap()) {
+                score[idx] @=> currEvent;
             }
-            1::samp => now;
+            
+            currEvent.d => now;
         }
+    }
+}
+
+// individual events that happen in the score
+class ScoreEvent {
+    Instr i;
+    // tempo bounds to execute event
+    float tMin;
+    float tMax;
+    
+    // time until next event
+    dur d; 
+    
+    fun int run(float tempo) {
+        if (tempo >= tMin && tempo <= tMax) {
+            return 1;
+        }
+        return 0;
     }
 }
 
@@ -120,8 +149,22 @@ class Instr {
     }
 }
 
+
+
 Scheduler s;
 Phaser p @=> s.clock;
+
+ScoreEvent test;
+Instr i @=> test.i;
+5000 => test.tMin;
+6000 => test.tMax;
+5::second => test.d;
+
+[test, test, test] @=> s.score;
+
+
+
+
 
 spork~ s.execute();
 
