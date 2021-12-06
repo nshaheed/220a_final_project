@@ -14,12 +14,12 @@ class Phase {
     
     // get how long before the next attack
     fun dur nextEvent() {
-        <<< multi >>>;
+        // <<< multi >>>;
         return speed * multi;
     }
     
     fun void execute() {
-        0.5 => i.next;
+        0.25 => i.next;
     }
 }
 
@@ -63,6 +63,7 @@ class Phaser {
             
             // set up things for the next iteration
             nextEvent / 1::samp => tempo.next; // cast dur to float
+            <<< nextEvent >>>;
             nextEvent => now;
         }
     }
@@ -75,7 +76,21 @@ class Scheduler {
     fun void execute() {
         spork~ clock.execute();
         
-        100::second => now;
+        
+        while (true) {
+            if (clock.tempo.last() > 5500 && clock.tempo.last() < 5600) {
+                Instr i;
+                clock.tempo.last()::samp => i.tempo;
+                spork~ i.execute();
+            }
+            
+            if (clock.tempo.last() > 9000 && clock.tempo.last() < 9500) {
+                Instr i;
+                clock.tempo.last()::samp => i.tempo;
+                spork~ i.execute();
+            }
+            1::samp => now;
+        }
     }
 }
 
@@ -85,6 +100,24 @@ fun dur min(dur a, dur b) {
         return a;
     }
     return b;
+}
+
+// base instrument class with tempo
+class Instr {
+    1::second => dur tempo;
+    2::second => dur duration;
+    
+    Shakers shake => dac;
+    
+    fun void execute(){
+        now => time start;
+        start + duration => time end;
+        
+        while (now <= end) {
+            1 => shake.noteOn;
+            tempo => now;
+        }
+    }
 }
 
 Scheduler s;
