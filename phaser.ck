@@ -149,18 +149,39 @@ class Instr {
     }
 }
 
-
+class Beat extends Instr {
+    440 => float freq;
+    0.3 => float gain;
+    
+    SinOsc s1 => Gain g => dac;
+    SinOsc s2 => g;
+    
+    
+    0 => g.gain;
+    
+    fun void execute() {
+        1.0::second / tempo => float diff;
+        freq => s1.freq;
+        freq-diff => s2.freq;
+        
+        gain => g.gain;
+        
+        duration => now;
+        
+        0 => g.gain;
+    }
+}
 
 Scheduler s;
 Phaser p @=> s.clock;
 
 ScoreEvent test;
-Instr i @=> test.i;
-5000 => test.tMin;
-6000 => test.tMax;
+Beat i @=> test.i;
+8000 => test.tMin;
+11000 => test.tMax;
 5::second => test.d;
 
-[test, test, test] @=> s.score;
+[test, test, test, test] @=> s.score;
 
 
 
