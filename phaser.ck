@@ -63,7 +63,7 @@ class Phaser {
             
             // set up things for the next iteration
             nextEvent / 1::samp => tempo.next; // cast dur to float
-            // <<< nextEvent >>>;
+            // <<< "nextEvent", nextEvent >>>;
             nextEvent => now;
         }
     }
@@ -90,27 +90,28 @@ class Scheduler {
                 continue;
             }
             
+            <<< "Event", idx, currEvent.d / 1::second >>>;
+            
             // set up and execute the ScoreEvent
-            clock.tempo.last()::samp => currEvent.i.tempo;
-            spork~ currEvent.i.execute();
-            
-            
+            clock.tempo.last()::samp => currEvent.inst.tempo;
+            spork~ currEvent.inst.execute();
+                        
+            currEvent.d => now;
+          
             idx++;
             if (idx < score.cap()) {
                 score[idx] @=> currEvent;
             }
-            
-            currEvent.d => now;
         }
     }
 }
 
 // individual events that happen in the score
 class ScoreEvent {
-    Instr i;
+    Instr inst;
     // tempo bounds to execute event
-    float tMin;
-    float tMax;
+    0 => float tMin;
+    0 => float tMax;
     
     // time until next event
     dur d; 
@@ -147,43 +148,121 @@ class Instr {
             tempo => now;
         }
     }
+    
+    fun void update() {
+        
+    };
 }
 
-class Beat extends Instr {
+class Rest extends Instr {
+    
+    fun void execute() {
+        return;
+    }
+}
+
+class GlobalBeat {
     440 => float freq;
     0.3 => float gain;
+    1 => int power;
     
-    SinOsc s1 => Envelope e => dac;
+    dur tempo;
+    
+    SinOsc s1 => Envelope e => Gain g => dac;
     SinOsc s2 => e;
-    
-    
-    0 => g.gain;
-    
+            
+    gain => g.gain;
+        
     fun void execute() {
         1.0::second / tempo => float diff;
         freq => s1.freq;
         freq-diff => s2.freq;
-        
-        gain => e.target;
-        
-        e.keyOn();
-        
-        duration => now;
-        
-        e.keyOff();
+                
+        setEnv();
     }
+    
+    fun void setEnv() {
+        if (power) {
+            e.keyOn();
+        } else {
+            e.keyOff();
+        }
+    }
+}
+
+class Beat extends Instr {
+    GlobalBeat b;
+    
+    float freq;
+    float gain;
+    int power;
+    
+    fun void execute() {
+        freq => b.freq;
+        gain => b.gain;
+        power => b.power;
+        tempo => b.tempo;
+        
+        b.execute();
+    }
+}
+
+fun ScoreEvent beat(GlobalBeat gb, float freq, dur duration, float tMin, float tMax) {
+    // set up dependency chain
+    ScoreEvent e;
+    Beat b @=> e.inst;
+    gb @=> b.b;
+    
+    // beat vals
+    freq => b.freq;
+    1 => b.power;
+    
+    
+    duration => e.d;
+    tMin => e.tMin;
+    tMax => e.tMax;
+    
+    return e;
+}
+
+fun ScoreEvent beatOff(GlobalBeat gb) {
+    // set up dependency chain
+    ScoreEvent e;
+    Beat b @=> e.inst;
+    gb @=> b.b;
+
+    // turn off
+    0 => b.power;
+    
+    0::samp => e.d;
+    0 => e.tMin;
+    0 => e.tMax;
+    
+    return e;
+
 }
 
 Scheduler s;
 Phaser p @=> s.clock;
 
-ScoreEvent test;
-Beat i @=> test.i;
-11000 => test.tMin;
-12000 => test.tMax;
-5::second => test.d;
 
-[test, test, test, test] @=> s.score;
+ScoreEvent rest;
+Rest r @=> rest.inst;
+5::second => rest.d;
+
+GlobalBeat beat1;
+
+[
+rest
+, beat(beat1, 220, 1::second, 2000, 8000)
+, beat(beat1, 330, 1::second, 2000, 8000)
+, beat(beat1, 220, 1::second, 2000, 8000)
+, beat(beat1, 440, 1::second, 2000, 8000) 
+, beat(beat1, 220, 3::second, 2000, 8000)
+, beat(beat1, 330, 1::second, 2000, 8000) 
+, beatOff(beat1)
+, rest
+] @=> s.score;
 
 
 
