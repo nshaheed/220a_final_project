@@ -110,7 +110,6 @@ class Scheduler {
     
     fun void execute() {
         spork~ clock.execute();
-        
         score[idx] @=> ScoreEvent currEvent;
         
         while (idx < score.cap()) {
@@ -122,9 +121,9 @@ class Scheduler {
                 1::samp => now;
                 continue;
             }
-            
-            <<< "Event", idx, currEvent.d / 1::second >>>;
-            
+                        
+            <<< currEvent.print(), idx, clock.tempo.last()::samp, currEvent.d / 1::second, "second" >>>;
+
             // set up and execute the ScoreEvent
             clock.tempo.last()::samp => currEvent.inst.tempo;
             spork~ currEvent.inst.execute();
@@ -154,6 +153,10 @@ class ScoreEvent {
             return 1;
         }
         return 0;
+    }
+    
+    fun string print() {
+        return inst.print();
     }
 }
 
@@ -185,12 +188,20 @@ class Instr {
     fun void update() {
         
     };
+    
+    fun string print() {
+        return "Default";
+    }
 }
 
 class Rest extends Instr {
     
     fun void execute() {
         return;
+    }
+    
+    fun string print() {
+        return "Rest";
     }
 }
 
@@ -213,7 +224,9 @@ class GlobalBeat {
             return;
         }
         
+        
         1.0::second / tempo => float diff;
+        <<< "execute", diff >>>;
         freq => s1.freq;
         freq-diff => s2.freq;
         
@@ -243,6 +256,10 @@ class Beat extends Instr {
         tempo => b.tempo;
         
         b.execute();
+    }
+    
+    fun string print() {
+        return "Beat";
     }
 }
 
@@ -289,6 +306,10 @@ class Pluck extends Instr {
             
             rhythm[idx] * tempo => now;
         }
+    }
+    
+    fun string print() {
+        return "Pluck";
     }
 }
 
@@ -359,16 +380,20 @@ Rest r @=> rest.inst;
 
 GlobalBeat beat1;
 
-3 => int idx;
+0 => int idx;
 [
 rest(10::second)
 // rest(0::second)
 , pluck(10::second, 20::second, 4000, 5000)
 , pluck(5::second, 10::second, 4100, 4900)
-, pluck(10::second, 60::second, 8000, 9000)
-, pluck(10::second, 40::second, 4000, 5000)
-, beat(beat1, 220, 4::second, 10000, 11000)
+, pluck(10::second, 62::second, 8000, 9000)
+, pluck(3::second, 0.5::second, 4000, 5000)
+, pluck(3::second, 1::second, 4000, 5000)
+, pluck(3::second, 1::second, 4000, 5000)
+, pluck(3::second, 2::second, 4000, 5000)
+, pluck(10::second, 30::second, 4000, 5000)
 , beat(beat1, 220, 4::second, 9000, 11000)
+, beat(beat1, 220, 4::second, 3000, 4000)
 , beat(beat1, 220, 4::second, 8000, 11000)
 , beatOff(beat1), rest(4::second)
 , beat(beat1, 220, 1::second, 4000, 8000)
