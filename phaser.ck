@@ -9,7 +9,7 @@ class Phase {
 
     220 => bwg.freq;
     2 => bwg.preset;
-    0.7 => g.gain;
+    1 => g.gain;
     
     [
         0.5
@@ -380,7 +380,7 @@ Rest r @=> rest.inst;
 
 GlobalBeat beat1;
 
-0 => int idx;
+8 => int idx;
 [
 rest(10::second)
 // rest(0::second)
@@ -392,6 +392,7 @@ rest(10::second)
 , pluck(3::second, 1::second, 4000, 5000)
 , pluck(3::second, 2::second, 4000, 5000)
 , pluck(10::second, 30::second, 4000, 5000)
+// , beat(beat1, 440, 4::second, 9000, 11000)
 , beat(beat1, 220, 4::second, 9000, 11000)
 , beat(beat1, 220, 4::second, 3000, 4000)
 , beat(beat1, 220, 4::second, 8000, 11000)
