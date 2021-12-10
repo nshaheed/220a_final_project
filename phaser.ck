@@ -1,9 +1,18 @@
+0 => int stemCounter;
+
+
 // clock for the rhythm of a class/pattern yeilding thing.
 class Phase {
     1::second => dur speed;
     1.0 => float multi; // how fast it is relative to speed
     
-    BandedWG bwg => PRCRev r => Gain g => Pan2 pan => dac;
+    BandedWG bwg => Pan2 pan => PRCRev r => Gain g => dac;
+
+		// "test" => makeWvOut => WvOut2 test;
+		pan => WvOut2 w => blackhole;
+
+		stemFilename("phase") => w.wavFilename;
+		null @=> w;
     
     // 0.01 => r.mix;
     0.1 => r.mix;
@@ -74,7 +83,7 @@ class Phaser {
     Phase phase2;
     speed => phase2.speed;
     -1 * panAmount => phase2.pan.pan;
-    0.0 => phase2.g.gain;
+    // 0.0 => phase2.g.gain;
     
     1.03 => phase2.multi;
     
@@ -142,6 +151,27 @@ class Scheduler {
         }
     }
 }
+
+
+fun string stemFilename(string stemName) {
+		stemName + stemCounter + ".wav" => string filename;
+		stemCounter++;
+		return filename;
+}
+// make a wvout for a specific stem
+// fun int makeWvOut(string stem) {
+// 		WvOut2 w => blackhole;
+
+// 		"stems" => w.autoPrefix;
+// 		stem + wvouts.cap() + ".wav" => w.wavFilename;
+// 		// "test.wav" => w.wavFilename;
+
+// 		null @=> w;
+
+// 		wvouts << w;
+		
+// 		return wvouts.cap()-1;
+// }
 
 // individual events that happen in the score
 class ScoreEvent {
@@ -219,6 +249,10 @@ class GlobalBeat {
     
     SinOsc s1 => Envelope e => Gain g => dac;
     SinOsc s2 => e;
+
+		g => WvOut2 w => blackhole;
+		stemFilename("beat") => w.wavFilename;
+		null @=> w;		
     
     50::ms => e.duration;
     gain => g.gain;
@@ -274,6 +308,10 @@ class Pluck extends Instr {
     dur d;
     
     BandedWG bwg => Pan2 pan => dac;
+
+		pan => WvOut2 w => blackhole;
+		stemFilename("pluck") => w.wavFilename;
+		null @=> w;		
     
     gain => bwg.gain;
     Math.random2f(-0.4, 0.4) => pan.pan;
@@ -534,8 +572,8 @@ Rest r @=> rest.inst;
 
 GlobalBeat beat1;
 
-13
-// 0
+// 13
+0
 => int idx;
 [
 rest(10::second)
@@ -601,4 +639,4 @@ idx => s.idx;
 
 spork~ s.execute();
 
-300::second => now;
+400::second => now;
