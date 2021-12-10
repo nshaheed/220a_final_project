@@ -195,7 +195,7 @@ class Instr {
     };
     
     fun string print() {
-        return "Default";
+        return "Default\t";
     }
 }
 
@@ -206,7 +206,7 @@ class Rest extends Instr {
     }
     
     fun string print() {
-        return "Rest";
+        return "Rest\t";
     }
 }
 
@@ -263,7 +263,7 @@ class Beat extends Instr {
     }
     
     fun string print() {
-        return "Beat";
+        return "Beat\t";
     }
 }
 
@@ -284,17 +284,22 @@ class Pluck extends Instr {
     // , 1.0, 1.0, 0.5
     ]
     @=> float rhythm[];
-    
+
+    0 => int grow; 
     
     Envelope attack => blackhole;
-
-
     
     fun void execute() {
         now + d => time til;
         
         0.2 => attack.value;
-        d / 2.0 => attack.duration;
+
+				if (grow) {
+						d => attack.duration;
+				} else {
+						d / 2.0 => attack.duration;
+				}
+				
         attack.keyOn();
         
         while (now < til) {            
@@ -316,7 +321,7 @@ class Pluck extends Instr {
     }
     
     fun string print() {
-        return "Pluck";
+        return "Pluck\t";
     }
 }
 
@@ -343,7 +348,7 @@ class Bow extends Instr {
     };
     
     fun string print() {
-        return "Bow";
+        return "Bow\t";
     }
 
 }
@@ -405,7 +410,7 @@ class Blitter extends Instr {
 		}
 
 		fun string print() {
-        return "Blitter";
+        return "Blitter\t";
     }
 }
 
@@ -472,6 +477,22 @@ fun ScoreEvent pluck(dur wait, dur length, float freq, float tMin, float tMax) {
     return e;
 }
 
+fun ScoreEvent pluckGrow (dur wait, dur length, float freq, float tMin, float tMax) {
+    ScoreEvent e;
+    Pluck p @=> e.inst;
+    
+    tMin => e.tMin;
+    tMax => e.tMax;
+    
+    wait => e.d;
+    length => p.d;
+		1 => p.grow;
+
+		freq => p.freq;
+    
+    return e;
+}
+
 fun ScoreEvent rest(dur d) {
     ScoreEvent restEvent;
     Rest r @=> restEvent.inst;
@@ -513,19 +534,19 @@ Rest r @=> rest.inst;
 
 GlobalBeat beat1;
 
-12
-// 0
+// 25
+0
 => int idx;
 [
 rest(10::second)
 // rest(0::second)
-, pluck(10::second, 20::second, 4000, 5000)
-, pluck(5::second, 10::second, 4100, 4900)
+, pluck(10::second, 25::second, 4000, 5000)
+, pluck(7::second, 15::second, 4100, 4900)
 , pluck(10::second, 100::second, 8000, 9000)
 , pluck(3::second, 0.5::second, 4000, 5000)
 , pluck(3::second, 1::second, 4000, 5000)
 , pluck(3::second, 1::second, 4000, 5000)
-, pluck(3::second, 2::second, 4000, 5000)
+, pluck(1::second, 2::second, 4000, 5000)
 , pluck(10::second, 30::second, 3000, 4000)
 // , beat(beat1, 440, 4::second, 9000, 11000)
 // , beat(beat1, 220, 4::second, 9000, 11000)
@@ -539,11 +560,11 @@ rest(10::second)
 // , beat(beat1, 220, 1::second, 2000, 8000) 
 // , beat(beat1, 220, 1::second, 8000, 10000) 
 // , beatOff(beat1)
-, pluck(10::second, 30::second, 220, 3000, 4000)
+, pluck(10::second, 40::second, 220, 3000, 4000)
 , pluck(10::second, 30::second, 350, 3000, 4000)
-, pluck(10::second, 20::second, 880, 3000, 4000)
-, pluck(3::second, 30::second, 1320, 12000, 18000)
-, pluck(10::second, 30::second, 1100, 5000, 6000)
+, pluck(10::second, 30::second, 880, 3000, 4000)
+, pluck(3::second, 21::second, 1320, 12000, 18000)
+, pluck(10::second, 15::second, 1100, 5000, 6000)
 // , beat(beat1, 220, 4::second, 4000, 8000)
 , beat(beat1, 261.63, 4::second, 400, 800) // C natural
 // , beat(beat1, 220, 4::second, 4000, 8000)
@@ -553,13 +574,17 @@ rest(10::second)
 , beat(beat1, 261.63, 4::second, 800, 1200) // C natural
 , beat(beat1, 330, 0.25::second, 200, 800)
 , beat(beat1, 220, 3::second, 400, 800)
-, pluck(3::second, 30::second, 1320, 12000, 18000)
+, pluck(3::second, 40::second, 1320, 12000, 18000)
 , beat(beat1, 330, 0.25::second, 200, 800)
+, beat(beat1, 261.63, 0.25::second, 200, 800)
+, beat(beat1, 330, 0.25::second, 200, 800)
+, beat(beat1, 196, 0.25::second, 200, 800)
 , beat(beat1, 110, 4::second, 200, 400)
-, pluck(3::second, 27::second, 880, 3000, 4000)
-, pluck(3::second, 24::second, 350, 3000, 4000)
-, pluck(3::second, 21::second, 220, 3000, 4000)
-, pluck(3::second, 21::second, 220, 2000, 3000)
+, pluckGrow(3::second, 33::second, 880, 3000, 4000)
+, pluckGrow(3::second, 30::second, 350, 3000, 4000)
+, pluckGrow(3::second, 30::second, 220, 3000, 4000)
+, pluckGrow(3::second, 21::second, 220, 2000, 3000)
+, rest(22::second)
 , beatOff(beat1)
 
 
