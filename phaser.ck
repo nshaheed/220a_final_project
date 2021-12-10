@@ -534,8 +534,8 @@ Rest r @=> rest.inst;
 
 GlobalBeat beat1;
 
-// 25
-0
+13
+// 0
 => int idx;
 [
 rest(10::second)
@@ -543,11 +543,11 @@ rest(10::second)
 , pluck(10::second, 25::second, 4000, 5000)
 , pluck(7::second, 15::second, 4100, 4900)
 , pluck(10::second, 100::second, 8000, 9000)
-, pluck(3::second, 0.5::second, 4000, 5000)
+, pluck(3::second, 0.5::second, 4000, 5000) 
 , pluck(3::second, 1::second, 4000, 5000)
 , pluck(3::second, 1::second, 4000, 5000)
-, pluck(1::second, 2::second, 4000, 5000)
-, pluck(10::second, 30::second, 3000, 4000)
+, pluck(1.5::second, 2::second, 4000, 5000)
+, pluck(15::second, 55::second, 3000, 4000)
 // , beat(beat1, 440, 4::second, 9000, 11000)
 // , beat(beat1, 220, 4::second, 9000, 11000)
 // , beat(beat1, 220, 4::second, 3000, 4000)
@@ -561,34 +561,31 @@ rest(10::second)
 // , beat(beat1, 220, 1::second, 8000, 10000) 
 // , beatOff(beat1)
 , pluck(10::second, 40::second, 220, 3000, 4000)
-, pluck(10::second, 30::second, 350, 3000, 4000)
-, pluck(10::second, 30::second, 880, 3000, 4000)
-, pluck(3::second, 21::second, 1320, 12000, 18000)
+, pluck(10::second, 30::second, 347.7, 3000, 4000) // F
+, pluck(10::second, 30::second, 880, 3000, 4000) // A
+, pluck(3::second, 21::second, 1320, 12000, 18000) // E
 , pluck(10::second, 15::second, 1100, 5000, 6000)
 // , beat(beat1, 220, 4::second, 4000, 8000)
-, beat(beat1, 261.63, 4::second, 400, 800) // C natural
+, beat(beat1, 260.7, 4::second, 400, 800) // C natural (make just inton)
 // , beat(beat1, 220, 4::second, 4000, 8000)
 , beat(beat1, 330, 4::second, 200, 400)
 , beat(beat1, 220, 3::second, 400, 800)
 , beat(beat1, 110, 4::second, 200, 400)
-, beat(beat1, 261.63, 4::second, 800, 1200) // C natural
+, beat(beat1, 260.7, 4::second, 800, 1200) // C natural
 , beat(beat1, 330, 0.25::second, 200, 800)
 , beat(beat1, 220, 3::second, 400, 800)
 , pluck(3::second, 40::second, 1320, 12000, 18000)
 , beat(beat1, 330, 0.25::second, 200, 800)
-, beat(beat1, 261.63, 0.25::second, 200, 800)
+, beat(beat1, 260.7, 0.25::second, 200, 800)
 , beat(beat1, 330, 0.25::second, 200, 800)
-, beat(beat1, 196, 0.25::second, 200, 800)
+, beat(beat1, 195.6, 0.25::second, 200, 800) // G
 , beat(beat1, 110, 4::second, 200, 400)
-, pluckGrow(3::second, 33::second, 880, 3000, 4000)
-, pluckGrow(3::second, 30::second, 350, 3000, 4000)
-, pluckGrow(3::second, 30::second, 220, 3000, 4000)
-, pluckGrow(3::second, 21::second, 220, 2000, 3000)
+, pluckGrow(3::second, 33::second, 880, 3000, 4000) // clean this up
+, pluckGrow(3::second, 33::second, 350, 3000, 4000)
+, pluckGrow(3::second, 39::second, 440, 3000, 4000)
+, pluckGrow(3::second, 24::second, 220, 2000, 3000)
 , rest(22::second)
 , beatOff(beat1)
-
-
-
 // , rest(10::second)
 
 // , bow(10::second)
@@ -597,11 +594,11 @@ rest(10::second)
 // , blitter(3::second, 10::second, 3000, 4000)
 // , blitter(2::second, 10::second, 700, 900)
 // , blitter(10::second, 10::second, 6000, 7000)
-, rest(10::second)
+, rest(15::second)
 ] @=> s.score;
 
 idx => s.idx;
 
 spork~ s.execute();
 
-200::second => now;
+300::second => now;

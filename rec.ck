@@ -20,4 +20,5 @@ null @=> w;
 
 // infinite time loop...
 // ctrl-c will stop it, or modify to desired duration
-0.2::minute => now;
+3::minute => now;
+<<< "recording stopped" >>>;
