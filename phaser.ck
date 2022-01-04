@@ -1,5 +1,6 @@
 0 => int stemCounter;
 
+0 => int rec;
 
 // clock for the rhythm of a class/pattern yeilding thing.
 class Phase {
@@ -8,11 +9,13 @@ class Phase {
     
     BandedWG bwg => Pan2 pan => PRCRev r => Gain g => dac;
 
-		// "test" => makeWvOut => WvOut2 test;
-		pan => WvOut2 w => blackhole;
+    // "test" => makeWvOut => WvOut2 test;
+    if (rec) {
+        pan => WvOut2 w => blackhole;
+        stemFilename("phase") => w.wavFilename;
+        null @=> w;
+    }
 
-		stemFilename("phase") => w.wavFilename;
-		null @=> w;
     
     // 0.01 => r.mix;
     0.1 => r.mix;
@@ -250,9 +253,11 @@ class GlobalBeat {
     SinOsc s1 => Envelope e => Gain g => dac;
     SinOsc s2 => e;
 
+    if (rec) {
 		g => WvOut2 w => blackhole;
 		stemFilename("beat") => w.wavFilename;
-		null @=> w;		
+		null @=> w;	
+    } 
     
     50::ms => e.duration;
     gain => g.gain;
@@ -309,9 +314,11 @@ class Pluck extends Instr {
     
     BandedWG bwg => Pan2 pan => dac;
 
+    if (rec) {
 		pan => WvOut2 w => blackhole;
 		stemFilename("pluck") => w.wavFilename;
 		null @=> w;		
+    }
     
     gain => bwg.gain;
     Math.random2f(-0.4, 0.4) => pan.pan;
@@ -552,11 +559,11 @@ fun ScoreEvent blitter(dur wait, dur length, float tMin, float tMax) {
     ScoreEvent blitterEvent;
     Blitter b @=> blitterEvent.inst;
 
-		tMin => blitterEvent.tMin;
+    tMin => blitterEvent.tMin;
     tMax => blitterEvent.tMax;
     
     wait => blitterEvent.d;
-		length => b.d;
+    length => b.d;
     
     return blitterEvent;
 }
@@ -634,6 +641,8 @@ rest(10::second)
 // , blitter(10::second, 10::second, 6000, 7000)
 , rest(15::second)
 ] @=> s.score;
+
+// [ rest(300::second) ] @=> s.score;
 
 idx => s.idx;
 
