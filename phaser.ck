@@ -7,7 +7,10 @@ class Phase {
     1::second => dur speed;
     1.0 => float multi; // how fast it is relative to speed
     
-    BandedWG bwg => Pan2 pan => PRCRev r => Gain g => dac;
+    BandedWG bwg => 
+    dac;
+    
+    // Pan2 pan => PRCRev r => Gain g => dac;
 
     // "test" => makeWvOut => WvOut2 test;
     if (rec) {
@@ -28,6 +31,7 @@ class Phase {
     
     [
         0.5
+    /*
         ,0.5
         ,0.5
         ,0.5
@@ -39,6 +43,7 @@ class Phase {
         ,1
         ,0.5
         ,0.5
+        */
     ] @=> float rhythm[];
     0 => int idx;
     
@@ -60,7 +65,12 @@ class Phase {
         // 0.25 => i.next;
                 
         Math.random2f( 0, 1 ) => bwg.strikePosition;
-        Math.random2f( 1, 1) => bwg.modesGain;
+        
+        
+        // Math.random2f( 0.96, 1.0) 
+        // 0.96
+        1.0 // this one is too much but will adding reverb work?
+        => bwg.modesGain;
 
         Math.random2f( .7, 1 ) => bwg.pluck;
 				
@@ -89,7 +99,7 @@ class Phaser {
     // 0.0 => phase2.g.gain;
     
     1.03 => phase2.multi;
-    
+        
     fun void execute() {
         // <<< "phaser execute" >>>;
         
@@ -582,70 +592,16 @@ GlobalBeat beat1;
 // 13
 0
 => int idx;
-[
-rest(10::second)
-// rest(0::second)
-, pluck(10::second, 25::second, 4000, 5000)
-, pluck(7::second, 15::second, 4100, 4900)
-, pluck(10::second, 100::second, 8000, 9000)
-, pluck(3::second, 0.5::second, 4000, 5000) 
-, pluck(3::second, 1::second, 4000, 5000)
-, pluck(3::second, 1::second, 4000, 5000)
-, pluck(1.5::second, 2::second, 4000, 5000)
-, pluck(15::second, 55::second, 3000, 4000)
-// , beat(beat1, 440, 4::second, 9000, 11000)
-// , beat(beat1, 220, 4::second, 9000, 11000)
-// , beat(beat1, 220, 4::second, 3000, 4000)
-// , beat(beat1, 220, 4::second, 8000, 11000)
-// , beatOff(beat1), rest(4::second)
-// , beat(beat1, 220, 1::second, 4000, 8000)
-// , beat(beat1, 220, 1::second, 2000, 8000)
-// , beat(beat1, 220, 1::second, 2000, 8000) 
-// , beat(beat1, 220, 3::second, 2000, 8000)
-// , beat(beat1, 220, 1::second, 2000, 8000) 
-// , beat(beat1, 220, 1::second, 8000, 10000) 
-// , beatOff(beat1)
-, pluck(10::second, 40::second, 220, 3000, 4000)
-, pluck(10::second, 30::second, 347.7, 3000, 4000) // F
-, pluck(10::second, 30::second, 880, 3000, 4000) // A
-, pluck(3::second, 21::second, 1320, 12000, 18000) // E
-, pluck(10::second, 15::second, 1100, 5000, 6000)
-// , beat(beat1, 220, 4::second, 4000, 8000)
-, beat(beat1, 260.7, 4::second, 400, 800) // C natural (make just inton)
-// , beat(beat1, 220, 4::second, 4000, 8000)
-, beat(beat1, 330, 4::second, 200, 400)
-, beat(beat1, 220, 3::second, 400, 800)
-, beat(beat1, 110, 4::second, 200, 400)
-, beat(beat1, 260.7, 4::second, 800, 1200) // C natural
-, beat(beat1, 330, 0.25::second, 200, 800)
-, beat(beat1, 220, 3::second, 400, 800)
-, pluck(3::second, 40::second, 1320, 12000, 18000)
-, beat(beat1, 330, 0.25::second, 200, 800)
-, beat(beat1, 260.7, 0.25::second, 200, 800)
-, beat(beat1, 330, 0.25::second, 200, 800)
-, beat(beat1, 195.6, 0.25::second, 200, 800) // G
-, beat(beat1, 110, 4::second, 200, 400)
-, pluckGrow(3::second, 33::second, 880, 3000, 4000) // clean this up
-, pluckGrow(3::second, 33::second, 350, 3000, 4000)
-, pluckGrow(3::second, 39::second, 440, 3000, 4000)
-, pluckGrow(3::second, 24::second, 220, 2000, 3000)
-, rest(22::second)
-, beatOff(beat1)
-// , rest(10::second)
 
-// , bow(10::second)
-// , blitter(0.5::second, 10::second, 4000, 5000)
-// , blitter(2::second, 10::second, 6000, 7000)
-// , blitter(3::second, 10::second, 3000, 4000)
-// , blitter(2::second, 10::second, 700, 900)
-// , blitter(10::second, 10::second, 6000, 7000)
-, rest(15::second)
-] @=> s.score;
 
-// [ rest(300::second) ] @=> s.score;
+[ rest(300::second) ] @=> s.score;
 
 idx => s.idx;
 
 spork~ s.execute();
+
+Phaser clock;
+
+spork~ clock.execute();
 
 400::second => now;
