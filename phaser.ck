@@ -10,7 +10,7 @@ class Phase {
     BandedWG bwg => 
     dac;
     
-    // Pan2 pan => PRCRev r => Gain g => dac;
+    Pan2 pan => PRCRev r => Gain g => dac;
 
     // "test" => makeWvOut => WvOut2 test;
     if (rec) {
@@ -82,10 +82,14 @@ fun dur executePhase(Phase p) {
     return p.nextEvent();
 }
 
+class Tempo extends Event {
+    dur tempo;
+}
+
 // The actual phaser object to do the 
 // phasing && track tempo
 class Phaser {
-    Impulse tempo => blackhole;
+    Tempo tempo;
     0.4::second => dur speed;
     0.4 => float panAmount;
     
@@ -100,7 +104,7 @@ class Phaser {
     
     1.03 => phase2.multi;
         
-    fun void execute() {
+    fun void execute(Tempo tempo) {
         // <<< "phaser execute" >>>;
         
         phase1 => executePhase => dur d1;
@@ -120,47 +124,63 @@ class Phaser {
             d1 - nextEvent => d1;
             d2 - nextEvent => d2;
             
-            // set up things for the next iteration
-            nextEvent / 1::samp => tempo.next; // cast dur to float
-            // <<< "nextEvent", nextEvent >>>;
+            // set up things for the next iteration            
+            nextEvent => tempo.tempo;
+            
+            tempo.signal();
             nextEvent => now;
         }
     }
 }
 
+class SchedulerExecution extends Event {
+    ScoreEvent currEvent;
+}
+
 // Tool to schedule events from the score into the phaser's tempo
 class Scheduler {
     Phaser clock;
-    ScoreEvent score[];
+    // ScoreEvent score[];
     
-    0 => int idx;
+    // 0 => int idx;
+    
+    SchedulerExecution e;
+    Tempo tempo;
+    // clock.setTempo(tempo);
+    // Tempo tempo @=> clock.tempo;
     
     fun void execute() {
-        spork~ clock.execute();
-        score[idx] @=> ScoreEvent currEvent;
+        spork~ clock.execute(tempo);
         
-        while (idx < score.cap()) {
+        while (true) {
             
-            clock.tempo.last() => float currTempo;
+            e => now;
+            <<< "past scheduler execution event" >>>;
+            e.currEvent @=> ScoreEvent currEvent;
             
-            // skip and check tempo next time
-            if (!currEvent.run(currTempo)) {
-                1::samp => now;
-                continue;
+            while(!currEvent.run(tempo.tempo)) {
+                <<< "tempo", tempo.tempo >>>;
+                tempo => now;
             }
-                        
-            <<< currEvent.print(), idx, clock.tempo.last()::samp, currEvent.d / 1::second, "second" >>>;
+            
+            /*
+            <<< tempo.tempo >>>;
+            tempo => now;
+            <<< "past tempo event" >>>;
+            */
+            
+            /*
+            while (clock.tempo.last() <= 0) {
+                1::samp => now;
+            }
+            */
+                                    
+            <<< currEvent.print(), tempo.tempo, currEvent.d / 1::second, "second" >>>;
 
             // set up and execute the ScoreEvent
-            clock.tempo.last()::samp => currEvent.inst.tempo;
+            tempo.tempo => currEvent.inst.tempo;
             spork~ currEvent.inst.execute();
-                        
-            currEvent.d => now;
-          
-            idx++;
-            if (idx < score.cap()) {
-                score[idx] @=> currEvent;
-            }
+                    
         }
     }
 }
@@ -190,13 +210,13 @@ fun string stemFilename(string stemName) {
 class ScoreEvent {
     Instr inst;
     // tempo bounds to execute event
-    0 => float tMin;
-    0 => float tMax;
+    0::samp => dur tMin;
+    0::samp => dur tMax;
     
     // time until next event
     dur d; 
     
-    fun int run(float tempo) {
+    fun int run(dur tempo) {
         if (tempo >= tMin && tempo <= tMax) {
             return 1;
         }
@@ -469,7 +489,7 @@ class Blitter extends Instr {
     }
 }
 
-fun ScoreEvent beat(GlobalBeat gb, float freq, dur duration, float tMin, float tMax) {
+fun ScoreEvent beat(GlobalBeat gb, float freq, dur duration, dur tMin, dur tMax) {
     // set up dependency chain
     ScoreEvent e;
     Beat b @=> e.inst;
@@ -497,14 +517,14 @@ fun ScoreEvent beatOff(GlobalBeat gb) {
     0 => b.power;
     
     0::samp => e.d;
-    0 => e.tMin;
-    0 => e.tMax;
+    0::samp => e.tMin;
+    0::samp => e.tMax;
     
     return e;
 
 }
 
-fun ScoreEvent pluck(dur wait, dur length, float tMin, float tMax) {
+fun ScoreEvent pluck(dur wait, dur length, dur tMin, dur tMax) {
     ScoreEvent e;
     Pluck p @=> e.inst;
     
@@ -517,7 +537,7 @@ fun ScoreEvent pluck(dur wait, dur length, float tMin, float tMax) {
     return e;
 }
 
-fun ScoreEvent pluck(dur wait, dur length, float freq, float tMin, float tMax) {
+fun ScoreEvent pluck(dur wait, dur length, float freq, dur tMin, dur tMax) {
     ScoreEvent e;
     Pluck p @=> e.inst;
     
@@ -532,7 +552,7 @@ fun ScoreEvent pluck(dur wait, dur length, float freq, float tMin, float tMax) {
     return e;
 }
 
-fun ScoreEvent pluckGrow (dur wait, dur length, float freq, float tMin, float tMax) {
+fun ScoreEvent pluckGrow (dur wait, dur length, float freq, dur tMin, dur tMax) {
     ScoreEvent e;
     Pluck p @=> e.inst;
     
@@ -565,7 +585,7 @@ fun ScoreEvent bow(dur d) {
     return bowEvent;
 }
 
-fun ScoreEvent blitter(dur wait, dur length, float tMin, float tMax) {
+fun ScoreEvent blitter(dur wait, dur length, dur tMin, dur tMax) {
     ScoreEvent blitterEvent;
     Blitter b @=> blitterEvent.inst;
 
@@ -578,8 +598,56 @@ fun ScoreEvent blitter(dur wait, dur length, float tMin, float tMax) {
     return blitterEvent;
 }
 
+fun float scale(float inMin, float inMax, float outMin, float outMax, float val) {
+    (val - inMin) / (inMax - inMin) => float inProportion;
+    ((outMax - outMin) * inProportion) + outMin => float outVal;
+    
+    return outVal;
+}
+
 Scheduler s;
 Phaser p @=> s.clock;
+SchedulerExecution e @=> s.e;
+
+fun void manageMidi(MidiIn in) {
+    MidiMsg msg;
+    
+    dur pluckDur;
+
+    while(true) {
+        in => now;
+     
+         // receive midimsg(s)
+        while( in.recv( msg ) )
+        {
+            // print content
+            <<< msg.data1, msg.data2, msg.data3 >>>;
+            if (msg.data2 == 41 && msg.data3 > 0) { // check for track focus 1 button press
+                pluck(0::second, pluckDur, 220, 1000::samp, 15000::samp) @=> e.currEvent;
+                e.signal();
+            }
+            
+            if (msg.data2 == 49) { // set pluck duration val
+                scale(0, 127, 1, 40, msg.data3) => float amount;
+                amount::second => pluckDur;
+            }
+        }
+   
+    }
+}
+
+
+
+MidiIn midiIn;
+1 => int device; // device 0 is loopbe
+
+// open midi receiver, exit on fail
+if ( !midiIn.open(device) ) {
+    <<< "Failed to open MIDI device" >>>;
+    me.exit(); 
+}
+
+spork~ manageMidi(midiIn);
 
 /*
 ScoreEvent rest;
@@ -589,19 +657,24 @@ Rest r @=> rest.inst;
 
 GlobalBeat beat1;
 
-// 13
-0
-=> int idx;
-
-
-[ rest(300::second) ] @=> s.score;
-
-idx => s.idx;
-
 spork~ s.execute();
 
-Phaser clock;
+/*
+3::second => now;
 
-spork~ clock.execute();
 
-400::second => now;
+pluck(10::second, 40::second, 220, 500::samp, 15000::samp) @=> e.currEvent;
+e.signal();
+
+3::second => now;
+pluck(10::second, 40::second, 440, 3000::samp, 4000::samp) @=> e.currEvent;
+
+
+<<< e.currEvent >>>;
+
+e.signal();
+*/
+
+while (true) {
+    1::second => now;
+}
