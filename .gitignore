@@ -2,3 +2,5 @@
 /final_project Project/
 *.asd
 /stems/
+*.html
+*~
