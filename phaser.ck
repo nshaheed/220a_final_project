@@ -639,7 +639,7 @@ fun void manageMidi(MidiIn in) {
 
 
 MidiIn midiIn;
-1 => int device; // device 0 is loopbe
+"Launch Control XL" => string device; // device 0 is loopbe
 
 // open midi receiver, exit on fail
 if ( !midiIn.open(device) ) {
