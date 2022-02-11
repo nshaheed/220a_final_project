@@ -5,6 +5,12 @@
 // W  X  Y  Z  R   S   T  U  V  K  L  M   N   O  P  Q
   [0, 1, 2, 7, 8,  9, 10, 3, 4,11,12,13, 14, 15, 5, 6] @=> int channelMap[];
 
+PRCRev r => dac;
+0.1 => r.mix;
+
+pi => float maxElevation;
+
+
 
 // clock for the rhythm of a class/pattern yeilding thing.
 class Phase {
@@ -12,7 +18,7 @@ class Phase {
     1.0 => float multi; // how fast it is relative to speed
     
     // should I make multiple pan objects to get better surround?
-    BandedWG bwg => AmbPan3 pan => PRCRev r => Gain g => dac;
+    BandedWG bwg => AmbPan3 pan => Gain g => r;
 
     // "test" => makeWvOut => WvOut2 test;
     if (rec) {
@@ -25,7 +31,6 @@ class Phase {
     channelMap => pan.channelMap;
     
     // 0.01 => r.mix;
-    0.1 => r.mix;
 
     220 => bwg.freq;
     2 => bwg.preset;
@@ -311,7 +316,7 @@ class Pluck extends Instr {
     7 => float gain;
     dur d;
     
-    BandedWG bwg => Pan2 pan => dac;
+    BandedWG bwg => AmbPan3 pan => dac;
 
     if (rec) {
 		pan => WvOut2 w => blackhole;
@@ -320,7 +325,7 @@ class Pluck extends Instr {
     }
     
     gain => bwg.gain;
-    Math.random2f(-0.4, 0.4) => pan.pan;
+    Math.random2f(0, 2*pi) => pan.azimuth;
     
     // [1.0, 0.25, 0.25, 0.5] 
     [
@@ -337,12 +342,14 @@ class Pluck extends Instr {
         now + d => time til;
         
         0.2 => attack.value;
+        
+        Math.random2f(-1 * maxElevation, maxElevation) => pan.elevation;
 
-				if (grow) {
-						d => attack.duration;
-				} else {
-						d / 2.0 => attack.duration;
-				}
+        if (grow) {
+            d => attack.duration;
+        } else {
+            d / 2.0 => attack.duration;
+        }
 				
         attack.keyOn();
         
