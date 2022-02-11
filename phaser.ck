@@ -2,12 +2,17 @@
 
 0 => int rec;
 
+// W  X  Y  Z  R   S   T  U  V  K  L  M   N   O  P  Q
+  [0, 1, 2, 7, 8,  9, 10, 3, 4,11,12,13, 14, 15, 5, 6] @=> int channelMap[];
+
+
 // clock for the rhythm of a class/pattern yeilding thing.
 class Phase {
     1::second => dur speed;
     1.0 => float multi; // how fast it is relative to speed
     
-    BandedWG bwg => Pan2 pan => PRCRev r => Gain g => dac;
+    // should I make multiple pan objects to get better surround?
+    BandedWG bwg => AmbPan3 pan => PRCRev r => Gain g => dac;
 
     // "test" => makeWvOut => WvOut2 test;
     if (rec) {
@@ -16,6 +21,8 @@ class Phase {
         null @=> w;
     }
 
+    // add channelmap to pan
+    channelMap => pan.channelMap;
     
     // 0.01 => r.mix;
     0.1 => r.mix;
@@ -77,15 +84,21 @@ fun dur executePhase(Phase p) {
 class Phaser {
     Impulse tempo => blackhole;
     0.4::second => dur speed;
-    0.4 => float panAmount;
+    0 => float elevation;
+    pi/2 => float azimuth;
+    // 0.4 => float panAmount;
     
     Phase phase1;
     speed => phase1.speed;
-    panAmount => phase1.pan.pan;
+    // panAmount => phase1.pan.pan;
+    elevation => phase1.pan.elevation;
+    azimuth => phase1.pan.azimuth;
     
     Phase phase2;
     speed => phase2.speed;
-    -1 * panAmount => phase2.pan.pan;
+    elevation => phase2.pan.elevation;
+    -1 * azimuth => phase2.pan.azimuth;
+    // -1 * panAmount => phase2.pan.pan;
     // 0.0 => phase2.g.gain;
     
     1.03 => phase2.multi;
@@ -161,20 +174,6 @@ fun string stemFilename(string stemName) {
 		stemCounter++;
 		return filename;
 }
-// make a wvout for a specific stem
-// fun int makeWvOut(string stem) {
-// 		WvOut2 w => blackhole;
-
-// 		"stems" => w.autoPrefix;
-// 		stem + wvouts.cap() + ".wav" => w.wavFilename;
-// 		// "test.wav" => w.wavFilename;
-
-// 		null @=> w;
-
-// 		wvouts << w;
-		
-// 		return wvouts.cap()-1;
-// }
 
 // individual events that happen in the score
 class ScoreEvent {
