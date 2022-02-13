@@ -2,13 +2,11 @@
 
 0 => int rec;
 
+// ORIG channel mapping
 // W  X  Y  Z  R   S   T  U  V  K  L  M   N   O  P  Q
   [0, 1, 2, 7, 8,  9, 10, 3, 4,11,12,13, 14, 15, 5, 6] @=> int channelMap[];
 
-PRCRev r => dac;
-0.1 => r.mix;
-
-pi => float maxElevation;
+pi / 8 => float maxElevation;
 
 
 
@@ -18,24 +16,28 @@ class Phase {
     1.0 => float multi; // how fast it is relative to speed
     
     // should I make multiple pan objects to get better surround?
-    BandedWG bwg => AmbPan3 pan => Gain g => r;
+    BandedWG bwg => PRCRev r => AmbPan3 pan1 => Gain g => dac;
+    r => AmbPan3 pan2 => g;
+
+    0.1 => r.mix;
 
     // "test" => makeWvOut => WvOut2 test;
     if (rec) {
-        pan => WvOut2 w => blackhole;
+        pan1 => WvOut2 w => blackhole;
         stemFilename("phase") => w.wavFilename;
         null @=> w;
     }
 
     // add channelmap to pan
-    channelMap => pan.channelMap;
+    channelMap => pan1.channelMap;
+    channelMap => pan2.channelMap;
     
     // 0.01 => r.mix;
 
     220 => bwg.freq;
     2 => bwg.preset;
 
-    1 => g.gain;
+    2 => g.gain;
 		// 0 => g.gain;
     
     [
@@ -72,7 +74,9 @@ class Phase {
         // 0.25 => i.next;
                 
         Math.random2f( 0, 1 ) => bwg.strikePosition;
-        Math.random2f( 1, 1) => bwg.modesGain;
+        
+        1 => float mgain;
+        Math.random2f(mgain, mgain) => bwg.modesGain;
 
         Math.random2f( .7, 1 ) => bwg.pluck;
 				
@@ -89,20 +93,26 @@ fun dur executePhase(Phase p) {
 class Phaser {
     Impulse tempo => blackhole;
     0.4::second => dur speed;
-    0 => float elevation;
-    pi/2 => float azimuth;
+    0.0 * pi => float elevation;
+    0.5 * pi => float azimuth1;
     // 0.4 => float panAmount;
     
     Phase phase1;
     speed => phase1.speed;
     // panAmount => phase1.pan.pan;
-    elevation => phase1.pan.elevation;
-    azimuth => phase1.pan.azimuth;
+    elevation => phase1.pan1.elevation;
+    0.0 * pi => phase1.pan1.azimuth;
+    elevation => phase1.pan2.elevation;
+    0.5 * pi => phase1.pan2.azimuth;
+
     
     Phase phase2;
     speed => phase2.speed;
-    elevation => phase2.pan.elevation;
-    -1 * azimuth => phase2.pan.azimuth;
+    elevation => phase2.pan1.elevation;
+    0.25 * pi => phase2.pan1.azimuth;
+    elevation => phase2.pan2.elevation;
+    0.75 * pi => phase2.pan2.azimuth;
+
     // -1 * panAmount => phase2.pan.pan;
     // 0.0 => phase2.g.gain;
     
@@ -215,9 +225,9 @@ class Instr {
     1::second => dur tempo;
     2::second => dur duration;
     
-    Shakers shake => dac;
     
     fun void execute(){
+        Shakers shake => dac;
         now => time start;
         start + duration => time end;
         
@@ -247,14 +257,26 @@ class Rest extends Instr {
     }
 }
 
+class Elevation extends Instr {
+    0 => float newMaxElevation;
+    
+    fun void execute() {
+        newMaxElevation => maxElevation;
+    }
+    
+    fun string print() {
+        return "Elevation\t";
+    }
+}
+
 class GlobalBeat {
     440 => float freq;
-    0.1 => float gain;
+    0.2 => float gain;
     1 => int power;
     
     dur tempo;
     
-    SinOsc s1 => Envelope e => Gain g => dac;
+    SinOsc s1 => Envelope e => Gain g => AmbPan3 pan => dac;
     SinOsc s2 => e;
 
     if (rec) {
@@ -262,6 +284,10 @@ class GlobalBeat {
 		stemFilename("beat") => w.wavFilename;
 		null @=> w;	
     } 
+    
+    channelMap => pan.channelMap;
+    pi/2 => pan.azimuth;
+    -0.5 * pi => pan.elevation;
     
     50::ms => e.duration;
     gain => g.gain;
@@ -316,16 +342,15 @@ class Pluck extends Instr {
     7 => float gain;
     dur d;
     
-    BandedWG bwg => AmbPan3 pan => dac;
 
+    /*
     if (rec) {
 		pan => WvOut2 w => blackhole;
 		stemFilename("pluck") => w.wavFilename;
 		null @=> w;		
     }
+    */
     
-    gain => bwg.gain;
-    Math.random2f(0, 2*pi) => pan.azimuth;
     
     // [1.0, 0.25, 0.25, 0.5] 
     [
@@ -336,14 +361,18 @@ class Pluck extends Instr {
 
     0 => int grow; 
     
-    Envelope attack => blackhole;
     
     fun void execute() {
+        BandedWG bwg => AmbPan3 pan => dac;
+        channelMap => pan.channelMap;
+        gain => bwg.gain;
+        Math.random2f(0, 2*pi) => pan.azimuth;
+        Envelope attack => blackhole;
+        Math.random2f(-1 * maxElevation, maxElevation) => pan.elevation;
+
         now + d => time til;
         
         0.2 => attack.value;
-        
-        Math.random2f(-1 * maxElevation, maxElevation) => pan.elevation;
 
         if (grow) {
             d => attack.duration;
@@ -574,6 +603,20 @@ fun ScoreEvent blitter(dur wait, dur length, float tMin, float tMax) {
     return blitterEvent;
 }
 
+fun ScoreEvent elevation(float newMax) {
+    ScoreEvent elevationEvent;
+    Elevation e @=> elevationEvent.inst;
+    
+    newMax => e.newMaxElevation;
+    
+    1 => elevationEvent.tMin;
+    1000000 => elevationEvent.tMax;
+    
+    0::samp => elevationEvent.d;
+    
+    return elevationEvent;
+}
+
 Scheduler s;
 Phaser p @=> s.clock;
 
@@ -586,11 +629,12 @@ Rest r @=> rest.inst;
 GlobalBeat beat1;
 
 // 13
-0
+28
 => int idx;
+
+
 [
 rest(10::second)
-// rest(0::second)
 , pluck(10::second, 25::second, 4000, 5000)
 , pluck(7::second, 15::second, 4100, 4900)
 , pluck(10::second, 100::second, 8000, 9000)
@@ -599,6 +643,7 @@ rest(10::second)
 , pluck(3::second, 1::second, 4000, 5000)
 , pluck(1.5::second, 2::second, 4000, 5000)
 , pluck(15::second, 55::second, 3000, 4000)
+, elevation(pi/4)
 // , beat(beat1, 440, 4::second, 9000, 11000)
 // , beat(beat1, 220, 4::second, 9000, 11000)
 // , beat(beat1, 220, 4::second, 3000, 4000)
@@ -612,6 +657,7 @@ rest(10::second)
 // , beat(beat1, 220, 1::second, 8000, 10000) 
 // , beatOff(beat1)
 , pluck(10::second, 40::second, 220, 3000, 4000)
+, elevation(pi/2)
 , pluck(10::second, 30::second, 347.7, 3000, 4000) // F
 , pluck(10::second, 30::second, 880, 3000, 4000) // A
 , pluck(3::second, 21::second, 1320, 12000, 18000) // E
@@ -631,6 +677,7 @@ rest(10::second)
 , beat(beat1, 330, 0.25::second, 200, 800)
 , beat(beat1, 195.6, 0.25::second, 200, 800) // G
 , beat(beat1, 110, 4::second, 200, 400)
+, elevation(pi/1)
 , pluckGrow(3::second, 33::second, 880, 3000, 4000) // clean this up
 , pluckGrow(3::second, 33::second, 350, 3000, 4000)
 , pluckGrow(3::second, 39::second, 440, 3000, 4000)
