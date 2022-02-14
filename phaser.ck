@@ -7,9 +7,7 @@ class Phase {
     1::second => dur speed;
     1.0 => float multi; // how fast it is relative to speed
     
-    BandedWG bwg => 
-    dac;
-    
+    BandedWG bwg =>     
     Pan2 pan => PRCRev r => Gain g => dac;
 
     // "test" => makeWvOut => WvOut2 test;
@@ -26,7 +24,7 @@ class Phase {
     220 => bwg.freq;
     2 => bwg.preset;
 
-    1 => g.gain;
+    0.6 => g.gain;
 		// 0 => g.gain;
     
     [
@@ -240,12 +238,12 @@ fun dur min(dur a, dur b) {
 class Instr {
     1::second => dur tempo;
     2::second => dur duration;
-    
-    Shakers shake => dac;
-    
+
     fun void execute(){
         now => time start;
         start + duration => time end;
+        
+        Shakers shake => dac;
         
         while (now <= end) {
             1 => shake.noteOn;
@@ -280,14 +278,10 @@ class GlobalBeat {
     
     dur tempo;
     
-    SinOsc s1 => Envelope e => Gain g => dac;
-    SinOsc s2 => e;
-
-    if (rec) {
-		g => WvOut2 w => blackhole;
-		stemFilename("beat") => w.wavFilename;
-		null @=> w;	
-    } 
+    Blit s1 => Envelope e => Gain g => dac;
+    Blit s2 => e;
+    
+    2 => s1.harmonics => s2.harmonics;
     
     50::ms => e.duration;
     gain => g.gain;
@@ -298,7 +292,7 @@ class GlobalBeat {
             return;
         }
         
-        
+        Math.random2(1, 3) => s1.harmonics => s2.harmonics;
         1.0::second / tempo => float diff;
         freq => s1.freq;
         freq-diff => s2.freq;
@@ -336,45 +330,39 @@ class Beat extends Instr {
     }
 }
 
+Gain pluckGain => dac;
+
 class Pluck extends Instr {
     
     330 => float freq;
-    7 => float gain;
+    20 => float gain;
     dur d;
-    
-    BandedWG bwg => Pan2 pan => dac;
-
-    if (rec) {
-		pan => WvOut2 w => blackhole;
-		stemFilename("pluck") => w.wavFilename;
-		null @=> w;		
-    }
-    
-    gain => bwg.gain;
-    Math.random2f(-0.4, 0.4) => pan.pan;
-    
-    // [1.0, 0.25, 0.25, 0.5] 
+        
     [
     1.0
-    // , 1.0, 1.0, 0.5
     ]
     @=> float rhythm[];
 
     0 => int grow; 
     
-    Envelope attack => blackhole;
     
     fun void execute() {
+        BandedWG bwg => Pan2 pan => pluckGain;
+        Envelope attack => blackhole;
+    
+        gain => bwg.gain;
+        Math.random2f(-1, 1) => pan.pan;
+
         now + d => time til;
         
         0.2 => attack.value;
 
-				if (grow) {
-						d => attack.duration;
-				} else {
-						d / 2.0 => attack.duration;
-				}
-				
+        if (grow) {
+                d => attack.duration;
+        } else {
+                d / 2.0 => attack.duration;
+        }
+        
         attack.keyOn();
         
         while (now < til) {            
@@ -609,6 +597,8 @@ Scheduler s;
 Phaser p @=> s.clock;
 SchedulerExecution e @=> s.e;
 
+GlobalBeat beat1;
+
 fun void manageMidi(MidiIn in) {
     MidiMsg msg;
     
@@ -630,6 +620,25 @@ fun void manageMidi(MidiIn in) {
             if (msg.data2 == 49) { // set pluck duration val
                 scale(0, 127, 1, 40, msg.data3) => float amount;
                 amount::second => pluckDur;
+            }
+
+            if (msg.data2 == 42 && msg.data3 > 0) { // check for track focus 2 button press
+                beat(beat1, 220, 0::samp, 5::ms, 400::ms) @=> e.currEvent;								
+                e.signal();
+            }
+            
+            if (msg.data2 == 74 && msg.data3 > 0) { // check for track focus 2 button press
+                beat(beat1, 110, 0::samp, 5::ms, 400::ms) @=> e.currEvent;								
+                e.signal();
+            }
+
+            if (msg.data2 == 77) { // adjust volume of global beat
+                scale(0, 127, 0, 1, msg.data3) => pluckGain.gain;
+            }
+
+            
+            if (msg.data2 == 78) { // adjust volume of global beat
+                scale(0, 127, 0, 1, msg.data3) => beat1.g.gain;
             }
         }
    
@@ -654,8 +663,6 @@ ScoreEvent rest;
 Rest r @=> rest.inst;
 10::second => rest.d;
 */
-
-GlobalBeat beat1;
 
 spork~ s.execute();
 
