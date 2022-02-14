@@ -330,7 +330,8 @@ class Beat extends Instr {
     }
 }
 
-Gain pluckGain => dac;
+Gain pluckGain => PRCRev pluckR => dac;
+0.1 => pluckR.mix;
 
 class Pluck extends Instr {
     
