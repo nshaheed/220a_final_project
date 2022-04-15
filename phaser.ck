@@ -4,7 +4,9 @@
 
 // ORIG channel mapping
 // W  X  Y  Z  R   S   T  U  V  K  L  M   N   O  P  Q
-  [0, 1, 2, 7, 8,  9, 10, 3, 4,11,12,13, 14, 15, 5, 6] @=> int channelMap[];
+// [  0, 1, 2, 7, 8,  9, 10, 3, 4,11,12,13, 14, 15, 5, 6] @=> int channelMap[];
+[  0, 1, 0, 1, 0,  1,  0, 1, 0, 1, 0, 1,  0,  1, 0, 1] @=> int channelMap[];
+// [  0, 0, 0, 0, 0,  0,  0, 0, 0, 0, 0, 0,  0,  0, 0, 0] @=> int channelMap[];
 
 pi / 8 => float maxElevation;
 
@@ -146,21 +148,66 @@ class Phaser {
     }
 }
 
+class ScoreEvent {
+    // tempo bounds to execute event
+    0 => float tMin;
+    0 => float tMax;
+    
+    // time until next event
+    dur d;
+		
+		fun void exec() {
+				return;
+    }
+
+    fun int run(float tempo) {
+        if (tempo >= tMin && tempo <= tMax) {
+            return 1;
+        }
+        return 0;
+    }
+
+		fun string print() {
+				return "ScoreEvent\t";
+		}
+
+		fun void execute() {
+				return;
+		}
+				
+}
+
+// individual events that happen in the score
+class InstrScoreEvent extends ScoreEvent {
+    Instr inst;
+    
+    // fun int run(float tempo) {
+    //     if (tempo >= tMin && tempo <= tMax) {
+    //         return 1;
+    //     }
+    //     return 0;
+    // }
+    
+    fun string print() {
+        return inst.print();
+    }
+}
+
 // Tool to schedule events from the score into the phaser's tempo
 class Scheduler {
     Phaser clock;
-    ScoreEvent score[];
+    InstrScoreEvent score[];
     
     0 => int idx;
     
     fun void execute() {
         spork~ clock.execute();
-        score[idx] @=> ScoreEvent currEvent;
+        score[idx] @=> InstrScoreEvent currEvent;
         
         while (idx < score.cap()) {
             
             clock.tempo.last() => float currTempo;
-            
+
             // skip and check tempo next time
             if (!currEvent.run(currTempo)) {
                 1::samp => now;
@@ -169,7 +216,7 @@ class Scheduler {
                         
             <<< currEvent.print(), idx, clock.tempo.last()::samp, currEvent.d / 1::second, "second" >>>;
 
-            // set up and execute the ScoreEvent
+            // set up and execute the InstrScoreEvent
             clock.tempo.last()::samp => currEvent.inst.tempo;
             spork~ currEvent.inst.execute();
                         
@@ -188,28 +235,6 @@ fun string stemFilename(string stemName) {
 		stemName + stemCounter + ".wav" => string filename;
 		stemCounter++;
 		return filename;
-}
-
-// individual events that happen in the score
-class ScoreEvent {
-    Instr inst;
-    // tempo bounds to execute event
-    0 => float tMin;
-    0 => float tMax;
-    
-    // time until next event
-    dur d; 
-    
-    fun int run(float tempo) {
-        if (tempo >= tMin && tempo <= tMax) {
-            return 1;
-        }
-        return 0;
-    }
-    
-    fun string print() {
-        return inst.print();
-    }
 }
 
 // get min of two durs
@@ -276,7 +301,9 @@ class GlobalBeat {
     
     dur tempo;
     
-    SinOsc s1 => Envelope e => Gain g => AmbPan3 pan => dac;
+    SinOsc s1 => Envelope e => Gain g =>
+		// dac;
+		AmbPan3 pan => dac;
     SinOsc s2 => e;
 
     if (rec) {
@@ -287,17 +314,18 @@ class GlobalBeat {
     
     channelMap => pan.channelMap;
     pi/2 => pan.azimuth;
-    -0.5 * pi => pan.elevation;
+    // -0.5 * pi => pan.elevation;
+		1 * pi => pan.elevation;
     
     50::ms => e.duration;
     gain => g.gain;
         
     fun void execute() {
+				<<< "globalbeat exec", s1.gain(), e.gain(), g.gain() >>>;
         if (!power) {
             e.keyOff();
             return;
         }
-        
         
         1.0::second / tempo => float diff;
         freq => s1.freq;
@@ -494,9 +522,9 @@ class Blitter extends Instr {
     }
 }
 
-fun ScoreEvent beat(GlobalBeat gb, float freq, dur duration, float tMin, float tMax) {
+fun InstrScoreEvent beat(GlobalBeat gb, float freq, dur duration, float tMin, float tMax) {
     // set up dependency chain
-    ScoreEvent e;
+    InstrScoreEvent e;
     Beat b @=> e.inst;
     gb @=> b.b;
     
@@ -512,9 +540,9 @@ fun ScoreEvent beat(GlobalBeat gb, float freq, dur duration, float tMin, float t
     return e;
 }
 
-fun ScoreEvent beatOff(GlobalBeat gb) {
+fun InstrScoreEvent beatOff(GlobalBeat gb) {
     // set up dependency chain
-    ScoreEvent e;
+    InstrScoreEvent e;
     Beat b @=> e.inst;
     gb @=> b.b;
 
@@ -529,8 +557,8 @@ fun ScoreEvent beatOff(GlobalBeat gb) {
 
 }
 
-fun ScoreEvent pluck(dur wait, dur length, float tMin, float tMax) {
-    ScoreEvent e;
+fun InstrScoreEvent pluck(dur wait, dur length, float tMin, float tMax) {
+    InstrScoreEvent e;
     Pluck p @=> e.inst;
     
     tMin => e.tMin;
@@ -542,8 +570,8 @@ fun ScoreEvent pluck(dur wait, dur length, float tMin, float tMax) {
     return e;
 }
 
-fun ScoreEvent pluck(dur wait, dur length, float freq, float tMin, float tMax) {
-    ScoreEvent e;
+fun InstrScoreEvent pluck(dur wait, dur length, float freq, float tMin, float tMax) {
+    InstrScoreEvent e;
     Pluck p @=> e.inst;
     
     tMin => e.tMin;
@@ -557,8 +585,8 @@ fun ScoreEvent pluck(dur wait, dur length, float freq, float tMin, float tMax) {
     return e;
 }
 
-fun ScoreEvent pluckGrow (dur wait, dur length, float freq, float tMin, float tMax) {
-    ScoreEvent e;
+fun InstrScoreEvent pluckGrow (dur wait, dur length, float freq, float tMin, float tMax) {
+    InstrScoreEvent e;
     Pluck p @=> e.inst;
     
     tMin => e.tMin;
@@ -573,16 +601,16 @@ fun ScoreEvent pluckGrow (dur wait, dur length, float freq, float tMin, float tM
     return e;
 }
 
-fun ScoreEvent rest(dur d) {
-    ScoreEvent restEvent;
+fun InstrScoreEvent rest(dur d) {
+    InstrScoreEvent restEvent;
     Rest r @=> restEvent.inst;
     d => restEvent.d;
     
     return restEvent;
 }
 
-fun ScoreEvent bow(dur d) {
-    ScoreEvent bowEvent;
+fun InstrScoreEvent bow(dur d) {
+    InstrScoreEvent bowEvent;
     Bow b @=> bowEvent.inst;
     
     d => bowEvent.d;
@@ -590,8 +618,8 @@ fun ScoreEvent bow(dur d) {
     return bowEvent;
 }
 
-fun ScoreEvent blitter(dur wait, dur length, float tMin, float tMax) {
-    ScoreEvent blitterEvent;
+fun InstrScoreEvent blitter(dur wait, dur length, float tMin, float tMax) {
+    InstrScoreEvent blitterEvent;
     Blitter b @=> blitterEvent.inst;
 
     tMin => blitterEvent.tMin;
@@ -603,8 +631,8 @@ fun ScoreEvent blitter(dur wait, dur length, float tMin, float tMax) {
     return blitterEvent;
 }
 
-fun ScoreEvent elevation(float newMax) {
-    ScoreEvent elevationEvent;
+fun InstrScoreEvent elevation(float newMax) {
+    InstrScoreEvent elevationEvent;
     Elevation e @=> elevationEvent.inst;
     
     newMax => e.newMaxElevation;
@@ -621,15 +649,16 @@ Scheduler s;
 Phaser p @=> s.clock;
 
 /*
-ScoreEvent rest;
+InstrScoreEvent rest;
 Rest r @=> rest.inst;
 10::second => rest.d;
 */
 
 GlobalBeat beat1;
 
-// 13
-28
+// 0
+16
+// 28
 => int idx;
 
 

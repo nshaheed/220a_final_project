@@ -1,0 +1,3 @@
+* TODO replace prcrev with gverb
+** have 16 individual, global reverbs for each channel?
+* TODO share envelopes between sections
