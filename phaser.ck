@@ -193,6 +193,12 @@ class InstrScoreEvent extends ScoreEvent {
     }
 }
 
+class WrapperEvent extends ScoreEvent {
+		ScoreEvent scoreEvents[];
+
+		
+}
+
 // Tool to schedule events from the score into the phaser's tempo
 class Scheduler {
     Phaser clock;
@@ -656,8 +662,8 @@ Rest r @=> rest.inst;
 
 GlobalBeat beat1;
 
-// 0
-16
+0
+// 16
 // 28
 => int idx;
 
